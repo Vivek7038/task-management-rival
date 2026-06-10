@@ -41,15 +41,29 @@ function validate(data: FormData): FormErrors {
   if (!data.title.trim()) errors.title = "Title is required";
   else if (data.title.length > 255) errors.title = "Title too long (max 255)";
   if (data.description.length > 5000) errors.description = "Description too long (max 5000)";
+  if (data.dueDate) {
+    const due = new Date(data.dueDate);
+    if (isNaN(due.getTime())) errors.dueDate = "Invalid due date";
+    else if (due.getTime() < Date.now()) errors.dueDate = "Due date cannot be in the past";
+  }
   return errors;
+}
+
+const pad = (n: number) => String(n).padStart(2, "0");
+
+function formatDatetimeLocal(d: Date): string {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 function toDatetimeLocal(iso: string | null | undefined): string {
   if (!iso) return "";
   const d = new Date(iso);
   if (isNaN(d.getTime())) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return formatDatetimeLocal(d);
+}
+
+function nowDatetimeLocal(): string {
+  return formatDatetimeLocal(new Date());
 }
 
 type Props = {
@@ -131,7 +145,7 @@ export function TaskModal({ open, onOpenChange, task }: Props) {
           <DialogTitle>{isEdit ? "Edit task" : "Create task"}</DialogTitle>
         </DialogHeader>
 
-        <form id="task-form" onSubmit={handleSubmit} className="space-y-4">
+        <form id="task-form" noValidate onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1">
             <label className="text-sm font-medium" htmlFor="task-title">
               Title <span className="text-destructive">*</span>
@@ -177,7 +191,7 @@ export function TaskModal({ open, onOpenChange, task }: Props) {
                 id="task-status"
                 value={form.status}
                 onChange={(e) => set("status", e.target.value as Task["status"])}
-                className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                className="h-9 w-full cursor-pointer rounded-md border border-input bg-transparent px-3 py-1 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
               >
                 {STATUS_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>
@@ -195,7 +209,7 @@ export function TaskModal({ open, onOpenChange, task }: Props) {
                 id="task-priority"
                 value={form.priority}
                 onChange={(e) => set("priority", e.target.value as Task["priority"])}
-                className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                className="h-9 w-full cursor-pointer rounded-md border border-input bg-transparent px-3 py-1 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
               >
                 {PRIORITY_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>
@@ -213,9 +227,14 @@ export function TaskModal({ open, onOpenChange, task }: Props) {
             <Input
               id="task-due"
               type="datetime-local"
+              min={nowDatetimeLocal()}
               value={form.dueDate}
               onChange={(e) => set("dueDate", (e.target as HTMLInputElement).value)}
+              aria-invalid={!!errors.dueDate}
             />
+            {errors.dueDate && (
+              <p className="text-xs text-destructive">{errors.dueDate}</p>
+            )}
           </div>
         </form>
 

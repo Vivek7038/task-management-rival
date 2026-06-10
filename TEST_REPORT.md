@@ -138,7 +138,23 @@ Beyond the app bug, the spec itself had selectors/data that did not match the im
 | Filter by status | Used `getByRole('option', …)` and `[data-status]`/`[data-task-item]` attributes that don't exist | Items are `menuitem`; assert the trigger label becomes "In Progress" |
 | Sort by due date | Clicked a non-existent `/Sort/i` button and used `option` role + `ul`/`[data-task-list]` that don't exist | Sort trigger is labelled "Date Created"; items are `menuitem`; assert trigger label becomes "Due Date" |
 
-**Final automated run:** `18 passed (29.9s)` — auth (6) + tasks (9) + admin (3).
+**Final automated run:** `19 passed (39.1s)` — auth (6) + tasks (10, incl. past-due validation) + admin (3).
+
+> ⚠️ Run with `--workers=1` (`npx playwright test --workers=1`). The default 3-worker parallel run intermittently throws `Playwright Test did not expect test.beforeEach()` — a known module-resolution clash because **Next 16 bundles its own `@playwright/test`**. Each spec passes individually and the whole suite passes single-worker. (Pre-existing environment quirk, not a test defect.)
+
+## ✨ New Feature — Past due dates are blocked (Create & Edit)
+
+**Requirement:** Users must not be able to set a due date/time in the past when creating or editing a task.
+
+**Implementation** (`components/tasks/task-modal.tsx`):
+- The `Due date` input (`<input type="datetime-local">`) now has a `min` attribute set to the current local datetime (`nowDatetimeLocal()`), so the **native picker greys out past dates/times**.
+- Submit-time validation in `validate()` rejects any due date earlier than `Date.now()` with the inline error **"Due date cannot be in the past"** (also flags `aria-invalid`). This catches manually typed values and applies to both create and edit.
+- Added `noValidate` to the form so the friendly inline message is shown instead of the browser's native constraint bubble.
+
+**Verification:**
+- Automated: new test `Create task with past due date is rejected` (`e2e/tasks.spec.ts`) — passes.
+- In-browser (Playwright MCP): `#task-due` `min` = current time; submitting `2020-01-01` keeps the modal open, shows "Due date cannot be in the past", sets `aria-invalid="true"`, and creates no task. ✅
+- The existing `Create task with all fields` test now uses a **dynamically computed future date** (was hardcoded `2025-12-31`, which is in the past relative to the app's June-2026 clock).
 
 ## Recommendation
 
