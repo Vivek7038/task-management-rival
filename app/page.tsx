@@ -1,65 +1,135 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useState } from "react";
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { TaskToolbar } from "@/components/tasks/task-toolbar";
+import { TaskList } from "@/components/tasks/task-list";
+import { TaskModal } from "@/components/tasks/task-modal";
+import { TaskDetailSheet } from "@/components/tasks/task-detail-sheet";
+import { Pagination } from "@/components/tasks/pagination";
+import { useTasksQuery } from "@/lib/hooks/use-tasks";
+import { useSSE } from "@/lib/hooks/use-sse";
+import type { Task, TaskFilters } from "@/lib/types";
+import { useAuth } from "@/components/providers/auth-provider";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+
+const DEFAULT_FILTERS: TaskFilters = {
+  sort: "created",
+  dir: "desc",
+  page: 1,
+  limit: 20,
+};
+
+export default function DashboardPage() {
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const router = useRouter();
+
+  const [filters, setFilters] = useState<TaskFilters>(DEFAULT_FILTERS);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editTask, setEditTask] = useState<Task | null>(null);
+  const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
+
+  useSSE();
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.replace("/login");
+    }
+  }, [authLoading, isAuthenticated, router]);
+
+  const { data, isLoading, isError, refetch } = useTasksQuery(filters);
+
+  function updateFilters(partial: Partial<TaskFilters>) {
+    setFilters((f) => ({ ...f, ...partial }));
+  }
+
+  function openCreate() {
+    setEditTask(null);
+    setModalOpen(true);
+  }
+
+  function openEdit(task: Task) {
+    setEditTask(task);
+    setModalOpen(true);
+  }
+
+  function openDetail(task: Task) {
+    setDetailTaskId(task.id);
+  }
+
+  function closeDetail() {
+    setDetailTaskId(null);
+  }
+
+  const hasActiveFilters = Boolean(filters.status || filters.q);
+
+  if (authLoading) {
+    return null;
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8">
+      <div className="mb-6 flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Tasks</h1>
+          {data && (
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              {data.total} {data.total === 1 ? "task" : "tasks"}
+            </p>
+          )}
+        </div>
+        <Button type="button" onClick={openCreate} className="shrink-0">
+          <Plus className="size-4" />
+          New task
+        </Button>
+      </div>
+
+      <div className="space-y-4">
+        <TaskToolbar filters={filters} onFiltersChange={updateFilters} />
+
+        <TaskList
+          data={data}
+          isLoading={isLoading}
+          isError={isError}
+          filters={filters}
+          hasActiveFilters={hasActiveFilters}
+          onEdit={openEdit}
+          onView={openDetail}
+          onRetry={() => refetch()}
+          onCreateFirst={openCreate}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+
+        {data && data.totalPages > 1 && (
+          <Pagination
+            page={data.page}
+            totalPages={data.totalPages}
+            total={data.total}
+            limit={data.limit}
+            onPageChange={(p) => updateFilters({ page: p })}
+          />
+        )}
+      </div>
+
+      <TaskModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        task={editTask}
+      />
+
+      <TaskDetailSheet
+        taskId={detailTaskId}
+        onClose={closeDetail}
+        onEdit={(task) => {
+          closeDetail();
+          openEdit(task);
+        }}
+      />
+    </main>
   );
 }
