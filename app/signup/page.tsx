@@ -2,7 +2,6 @@
 
 import { CheckCircle2 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { useAuth } from "@/components/providers/auth-provider";
@@ -13,7 +12,6 @@ import { signupSchema } from "@/lib/schemas/auth";
 type FieldErrors = Partial<Record<"name" | "email" | "password", string>>;
 
 export default function SignupPage() {
-  const router = useRouter();
   const { isAuthenticated, isLoading, setUser } = useAuth();
 
   const [name, setName] = useState("");
@@ -25,9 +23,9 @@ export default function SignupPage() {
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
-      router.replace("/");
+      window.location.assign("/");
     }
-  }, [isLoading, isAuthenticated, router]);
+  }, [isLoading, isAuthenticated]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -57,14 +55,16 @@ export default function SignupPage() {
 
       if (!res.ok) {
         setServerError(data.message ?? "Sign up failed. Please try again.");
+        setSubmitting(false);
         return;
       }
 
       setUser(data.user);
-      router.replace("/");
+      // Full-page navigation so the just-set auth cookie is sent with the
+      // request and middleware sees the session (a client nav can race it).
+      window.location.assign("/");
     } catch {
       setServerError("Network error. Please try again.");
-    } finally {
       setSubmitting(false);
     }
   }

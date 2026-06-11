@@ -3,7 +3,7 @@
 import { Suspense } from "react";
 import { CheckCircle2 } from "lucide-react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { useAuth } from "@/components/providers/auth-provider";
@@ -29,7 +29,6 @@ const DEMO_ACCOUNTS = [
 ] as const;
 
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const { isAuthenticated, isLoading, setUser } = useAuth();
 
@@ -42,9 +41,9 @@ function LoginForm() {
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
       const next = searchParams.get("next") ?? "/";
-      router.replace(next);
+      window.location.assign(next);
     }
-  }, [isLoading, isAuthenticated, router, searchParams]);
+  }, [isLoading, isAuthenticated, searchParams]);
 
   async function login(emailValue: string, passwordValue: string) {
     setServerError(null);
@@ -76,15 +75,19 @@ function LoginForm() {
 
       if (!res.ok) {
         setServerError(data.message ?? "Login failed. Please try again.");
+        setSubmitting(false);
         return;
       }
 
       setUser(data.user);
       const next = searchParams.get("next") ?? "/";
-      router.replace(next);
+      // Full-page navigation (not router.replace): the auth cookie was just set
+      // on this response, and a hard navigation guarantees the browser sends it
+      // with the request so middleware sees the session. A client-side
+      // navigation can race the cookie and get bounced back to /login.
+      window.location.assign(next);
     } catch {
       setServerError("Network error. Please try again.");
-    } finally {
       setSubmitting(false);
     }
   }
