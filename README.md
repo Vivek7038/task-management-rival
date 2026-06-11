@@ -8,10 +8,11 @@ A full-stack task management app built with Next.js 16 App Router, Prisma, and N
 
 ## Live Demo
 
-```
-Frontend + Backend: [Deployed on Vercel — add link here]
-Note: Both the UI and the REST API are served from the same Vercel deployment URL.
-```
+**https://task-management-assignment-ashy.vercel.app**
+
+The UI and the REST API are served from the same Vercel deployment. The sign-in
+page has **one-click "Login as Regular user" / "Login as Admin"** buttons so you
+can jump straight in (credentials below).
 
 ---
 
@@ -26,11 +27,40 @@ Note: Both the UI and the REST API are served from the same Vercel deployment UR
 - Admin read-only view of all users' tasks
 - SSE real-time updates (task events pushed to connected clients)
 - Optimistic UI for complete-toggle and delete (instant update + rollback on failure)
-- Vercel Blob file attachments (images, pdf, doc, txt; ≤ 5 MB)
+- Vercel Blob file attachments (images, pdf, doc, txt; ≤ 1 MB per file, ≤ 1 MB total per task)
 - Per-task activity log (create, update, status change, attachment add/remove, delete)
-- Dark mode with system default and persistence across reloads
+- Dark mode (dark by default, theme toggle, preference persisted across reloads)
 - Docker local dev (one-command Postgres + app)
 - GitHub Actions CI (lint + build + Playwright E2E)
+
+---
+
+## Assignment Requirements Coverage
+
+**Task 1 — Backend API** ✅
+- `POST/GET/GET:id/PATCH/DELETE /api/tasks` (title, description, status, priority, due date)
+- List with status filter + offset pagination · PostgreSQL persistence
+- Input validation (Zod) on all write endpoints · consistent error shape + proper HTTP status codes
+
+**Task 2 — Auth & Authorization** ✅
+- Signup / login with JWT (httpOnly cookie) · passwords hashed with bcrypt
+- All task routes protected via middleware · users can only see/modify their own tasks
+- Session persists across refresh
+
+**Task 3 — Frontend** ✅
+- Task list with status filter + pagination · create/edit form with client-side validation
+- Mark complete · delete · loading / empty / error states · responsive (mobile + desktop)
+
+**Task 4 — Search & Sort** ✅
+- Search by title · sort by due date / priority / created date · filter + search + sort compose together
+
+**Task 5 — Deliverables** ✅
+- Setup instructions (this README) · `.env.example` · 19 Playwright E2E tests (≫ the required 3) · linear commit history
+
+**Bonus features** — all eight implemented ✅
+- Admin role · SSE real-time updates · optimistic UI · file attachments · activity log · Docker · GitHub Actions CI · dark mode (persisted)
+
+**Intentionally out of scope** (not in the brief): email verification, password reset, collaborative/real-time editing, attachment virus scanning.
 
 ---
 
@@ -73,7 +103,7 @@ npx playwright install
 npx playwright test
 ```
 
-See [testcases.md](testcases.md) for all 33 E2E scenarios.
+19 automated Playwright tests cover auth, task CRUD, validation, search/sort/filter, and admin access. See [testcases.md](testcases.md) for the full documented scenario list.
 
 ---
 
