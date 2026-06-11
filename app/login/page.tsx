@@ -13,6 +13,21 @@ import { loginSchema } from "@/lib/schemas/auth";
 
 type FieldErrors = Partial<Record<"email" | "password", string>>;
 
+// Seeded demo accounts (see prisma/seed.ts) — surfaced as one-click logins so
+// reviewers can jump straight in without typing credentials.
+const DEMO_ACCOUNTS = [
+  {
+    role: "Regular user",
+    email: "user@taskmanager.dev",
+    password: "User1234!",
+  },
+  {
+    role: "Admin",
+    email: "admin@taskmanager.dev",
+    password: "Admin1234!",
+  },
+] as const;
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -31,12 +46,14 @@ function LoginForm() {
     }
   }, [isLoading, isAuthenticated, router, searchParams]);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function login(emailValue: string, passwordValue: string) {
     setServerError(null);
     setFieldErrors({});
 
-    const parsed = loginSchema.safeParse({ email, password });
+    const parsed = loginSchema.safeParse({
+      email: emailValue,
+      password: passwordValue,
+    });
     if (!parsed.success) {
       const errs: FieldErrors = {};
       for (const issue of parsed.error.issues) {
@@ -70,6 +87,19 @@ function LoginForm() {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    void login(email, password);
+  }
+
+  // Fill the visible fields (so reviewers can see the credentials used) and
+  // sign in immediately — a true one-click login.
+  function handleDemoLogin(account: (typeof DEMO_ACCOUNTS)[number]) {
+    setEmail(account.email);
+    setPassword(account.password);
+    void login(account.email, account.password);
   }
 
   if (isLoading) return null;
@@ -141,6 +171,36 @@ function LoginForm() {
             {submitting ? "Signing in…" : "Sign in"}
           </Button>
         </form>
+
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="h-px flex-1 bg-border" />
+            <span className="text-xs font-medium text-muted-foreground">
+              Or try a demo account
+            </span>
+            <div className="h-px flex-1 bg-border" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            {DEMO_ACCOUNTS.map((account) => (
+              <Button
+                key={account.email}
+                type="button"
+                variant="outline"
+                className="h-auto flex-col items-start gap-0.5 py-2"
+                disabled={submitting}
+                onClick={() => handleDemoLogin(account)}
+              >
+                <span className="text-sm font-medium">
+                  Login as {account.role}
+                </span>
+                <span className="text-xs font-normal text-muted-foreground">
+                  {account.email}
+                </span>
+              </Button>
+            ))}
+          </div>
+        </div>
 
         <p className="text-center text-sm text-muted-foreground">
           Don&apos;t have an account?{" "}
