@@ -6,9 +6,7 @@ A full-stack task management app built with Next.js 16 App Router, Prisma, and N
 
 ---
 
-## Live Demo
 
-**https://task-management-assignment-ashy.vercel.app**
 
 The UI and the REST API are served from the same Vercel deployment. The sign-in
 page has **one-click "Login as Regular user" / "Login as Admin"** buttons so you
