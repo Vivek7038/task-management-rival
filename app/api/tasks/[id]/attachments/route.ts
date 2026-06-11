@@ -5,7 +5,12 @@ import { onAttachmentAdded } from "@/lib/activity";
 import { put } from "@vercel/blob";
 import { NextRequest, NextResponse } from "next/server";
 
-const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
+const MAX_FILE_SIZE_BYTES = 1 * 1024 * 1024; // 1 MB per file
+const MAX_TOTAL_SIZE_BYTES = 1 * 1024 * 1024; // 1 MB total across a task's attachments
+
+function formatMb(bytes: number): string {
+  return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+}
 
 const ALLOWED_MIME_TYPES = new Set([
   "image/jpeg",
@@ -90,10 +95,10 @@ export async function POST(req: NextRequest, { params }: Params) {
     return apiError("VALIDATION_ERROR", "File must not be empty", 400);
   }
 
-  if (file.size > MAX_SIZE_BYTES) {
+  if (file.size > MAX_FILE_SIZE_BYTES) {
     return apiError(
       "VALIDATION_ERROR",
-      `File exceeds maximum size of 5 MB (received ${(file.size / 1024 / 1024).toFixed(2)} MB)`,
+      `File exceeds the maximum size of ${formatMb(MAX_FILE_SIZE_BYTES)} (received ${formatMb(file.size)})`,
       400
     );
   }
@@ -103,6 +108,23 @@ export async function POST(req: NextRequest, { params }: Params) {
     return apiError(
       "VALIDATION_ERROR",
       `File type '${mimeType}' is not allowed. Accepted: images, PDF, DOC, DOCX, TXT`,
+      400
+    );
+  }
+
+  // Enforce a per-task total: the sum of existing attachments plus this file
+  // must not exceed MAX_TOTAL_SIZE_BYTES.
+  const existing = await db.attachment.aggregate({
+    where: { taskId: task.id },
+    _sum: { sizeBytes: true },
+  });
+  const usedBytes = existing._sum.sizeBytes ?? 0;
+  if (usedBytes + file.size > MAX_TOTAL_SIZE_BYTES) {
+    const remaining = Math.max(0, MAX_TOTAL_SIZE_BYTES - usedBytes);
+    return apiError(
+      "VALIDATION_ERROR",
+      `Total attachment size for this task is limited to ${formatMb(MAX_TOTAL_SIZE_BYTES)}. ` +
+        `Already used ${formatMb(usedBytes)}; ${formatMb(remaining)} remaining, but this file is ${formatMb(file.size)}.`,
       400
     );
   }
