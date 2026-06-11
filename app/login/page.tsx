@@ -187,16 +187,10 @@ function LoginForm() {
                 key={account.email}
                 type="button"
                 variant="outline"
-                className="h-auto flex-col items-start gap-0.5 py-2"
                 disabled={submitting}
                 onClick={() => handleDemoLogin(account)}
               >
-                <span className="text-sm font-medium">
-                  Login as {account.role}
-                </span>
-                <span className="text-xs font-normal text-muted-foreground">
-                  {account.email}
-                </span>
+                Login as {account.role}
               </Button>
             ))}
           </div>
