@@ -136,7 +136,7 @@ export function AttachmentsPanel({ taskId }: { taskId: string }) {
             browse
           </button>
         </p>
-        <p className="text-xs text-muted-foreground">Images, PDF, DOC, DOCX, TXT — max 5 MB</p>
+        <p className="text-xs text-muted-foreground">Images, PDF, DOC, DOCX, TXT — max 1 MB per file, 1 MB total</p>
         {uploadMutation.isPending && (
           <p className="text-xs text-primary animate-pulse">Uploading…</p>
         )}
